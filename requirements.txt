@@ -1,0 +1,16 @@
+# Core
+anthropic
+boto3
+pyyaml
+pytest
+
+# Phase 6 — MCP, via the standalone fastmcp package (see mcp_server/server.py)
+fastmcp
+
+# Phase 8 — Strands (needs Python 3.10+)
+strands-agents
+strands-agents-tools
+
+# Infra
+aws-cdk-lib
+constructs

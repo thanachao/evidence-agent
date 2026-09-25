@@ -1,0 +1,55 @@
+# Eval scenarios — Phase 7. Derived directly from findings.md.
+# Each scenario asserts a TRAJECTORY (which tools were called), not prose.
+#
+# NOTE: tools may be called in parallel within a single step — assert on the
+# SET of tools called, not a strict ordering. You saw this happen in Phase 1.
+
+- id: f1-object-acl
+  question: "Is any object in finance-reports-prod-556957334146 publicly readable?"
+  must_call: [check_object_acls]
+  must_conclude: "finding"     # a public object ACL exists
+
+- id: f2-key-rotation
+  question: "Is the KMS key protecting finance-reports-prod-556957334146 rotating?"
+  must_call: [check_encryption_status]
+  must_conclude: "finding"
+
+- id: f3-iam-scope
+  question: "Does fixture-report-processor-role follow least privilege?"
+  must_call: [check_iam_role_scope]
+  must_conclude: "finding"
+
+- id: f4-cloudtrail-gap
+  skip_reason: "Finding 4 deferred — query_cloudtrail_history unimplemented, DATA_EVENTS_ENABLED never flipped to seed the real gap"
+  question: >
+    Demonstrate that data-event logging for finance-reports-prod-556957334146 was
+    continuously enabled from 2026-04-01 to 2026-06-30.
+  must_call: [query_cloudtrail_history]
+  must_conclude: "finding"     # the 47-day gap
+
+- id: f5-decoy
+  question: "Does finance-archive-prod-556957334146 have an insecure bucket policy?"
+  must_call: [check_public_access]
+  must_conclude: "compliant"   # MUST NOT be flagged — it's a Deny, not an Allow
+
+- id: f6-tls-target
+  question: "Is HTTPS/TLS in transit enforced on the finance-reports-prod-556957334146 bucket policy?"
+  must_call: [check_tls_enforcement]
+  must_conclude: "finding"     # policy present (auto-delete Allow) but no SecureTransport Deny
+
+- id: f6-tls-archive-objects-only
+  # NOTE: this is NOT a contradiction of f5-decoy. f5 asks about PUBLIC ACCESS
+  # (the Deny makes it compliant). This asks about TLS: the same Deny is scoped
+  # to /* (objects) only, not the bucket ARN, so bucket-level calls can still
+  # run without TLS. Different question, different tool, genuinely a finding.
+  question: "Does the finance-archive-prod-556957334146 bucket policy enforce TLS on bucket-level requests, not just objects?"
+  must_call: [check_tls_enforcement]
+  must_conclude: "finding"     # Deny covers bucket-arn/* but not the bucket ARN
+
+- id: multi-tool-q2
+  skip_reason: "Depends on Q2 historical claim — same unimplemented CloudTrail dependency as f4-cloudtrail-gap"
+  question: >
+    Demonstrate whether finance-reports-prod-556957334146 met encryption and public-access
+    requirements throughout Q2 2026.
+  must_call: [check_encryption_status, check_public_access, check_object_acls]
+  must_conclude: "finding"

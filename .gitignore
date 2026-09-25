@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.env
+.venv/
+venv/
+cdk.out/
+.pytest_cache/
+lambda_build/
+infra/cdk.out/
+.pytest_cache/
