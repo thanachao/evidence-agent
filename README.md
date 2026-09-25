@@ -76,7 +76,7 @@ python scripts/run_pipeline.py
 python scripts/approve.py           # list pending, then <session_id> --approve
 ```
 
-## Known gaps — real, not hidden
+## Known gaps
 
 - **CloudTrail Lake historical query** (`query_cloudtrail_history`) — deliberately deferred. No proper high-level CDK construct exists for the Event Data Store; scoped, not built, documented as a real engineering call rather than rushed.
 - **`ANTHROPIC_API_KEY` in `pipeline_stack.py`** reads from an environment variable at deploy time now, not a hardcoded literal — but it's still not in Secrets Manager, which is the real fix.
@@ -84,6 +84,5 @@ python scripts/approve.py           # list pending, then <session_id> --approve
 - **Only the first of multiple write proposals in one turn gets captured** — `approval_handler.py` uses `next()` to grab one `flag_finding_for_remediation` call; a second one in the same turn is silently dropped. Discovered from a real run that proposed two.
 - **The state machine's 15-minute timeout undercuts part of ADR 0001's own argument** — the pause mechanism can hold for days, but this specific deployment would kill the whole execution at 15 minutes regardless.
 - **No approver identity is captured** — anyone with the AWS profile's IAM permissions can call `approve.py`; the evidence trail records *that* something was approved, not *who* approved it.
-- **Strands Mode B (via MCP) is written but never executed** — Mode A is confirmed; the MCP-consumption path in `strands_agent.py` hasn't been run.
 - **Cost and latency per investigation have never been measured.**
 - **Eval suite consistency across repeated runs has never been checked** — no run-to-run variance testing done yet.
