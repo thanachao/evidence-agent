@@ -37,14 +37,14 @@
   must_call: [check_tls_enforcement]
   must_conclude: "finding"     # policy present (auto-delete Allow) but no SecureTransport Deny
 
-- id: f6-tls-archive-objects-only
-  # NOTE: this is NOT a contradiction of f5-decoy. f5 asks about PUBLIC ACCESS
-  # (the Deny makes it compliant). This asks about TLS: the same Deny is scoped
-  # to /* (objects) only, not the bucket ARN, so bucket-level calls can still
-  # run without TLS. Different question, different tool, genuinely a finding.
+- id: f6-tls-archive-enforced
+  # Was f6-tls-archive-objects-only (a finding): the archive's TLS Deny used to
+  # cover bucket-arn/* only. The fixture now covers the bucket ARN too, so the
+  # decoy is compliant on every surface. Kept as a TLS negative control — the
+  # agent must not flag a bucket whose Deny is complete.
   question: "Does the finance-archive-prod-556957334146 bucket policy enforce TLS on bucket-level requests, not just objects?"
   must_call: [check_tls_enforcement]
-  must_conclude: "finding"     # Deny covers bucket-arn/* but not the bucket ARN
+  must_conclude: "compliant"   # Deny covers both the bucket ARN and bucket-arn/*
 
 - id: multi-tool-q2
   skip_reason: "Depends on Q2 historical claim — same unimplemented CloudTrail dependency as f4-cloudtrail-gap"

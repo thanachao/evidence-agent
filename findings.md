@@ -111,13 +111,18 @@ Region: pick one, stay consistent — findings below assume a single region.
   `Effect`.
 - **Expected result:** agent must explicitly conclude "compliant" here,
   not just stay silent about it.
+- **Must be compliant on every surface the tools check**, not only the
+  policy: its own KMS key with rotation enabled (not Finding 2's key), Block
+  Public Access fully on, and a TLS Deny covering the bucket ARN and its
+  objects. Otherwise a thorough agent correctly finds something and the
+  decoy stops being one.
 
 ---
 
 ## Finding 6 — TLS (encryption in transit) not enforced
 
-- **Resource:** `finance-reports-prod` bucket (primary case). The decoy
-  bucket `finance-archive-prod` is a *second, subtler* instance — see note.
+- **Resource:** `finance-reports-prod` bucket. The decoy bucket
+  `finance-archive-prod` is TLS-*compliant* — see note.
 - **Configured as:** `finance-reports-prod` has a bucket policy, but it is
   only the `Allow` that CDK auto-injects because `auto_delete_objects=True`
   (grants the auto-delete Lambda `s3:DeleteObject*` / `s3:GetBucket*` etc.).
@@ -135,14 +140,16 @@ Region: pick one, stay consistent — findings below assume a single region.
   `SecureTransport` Deny covering the bucket, which is what this fixture
   actually has. Both are findings.
 - **Expected real tool:** new tool, `check_tls_enforcement(bucket_name)`.
-- **Note (decoy interaction):** `finance-archive-prod` (Finding 5) *does*
-  have a `SecureTransport` Deny, but scoped to `arn:.../finance-archive-prod-<acct>/*`
-  (objects) only — **not** the bucket ARN (its policy also carries the same
-  auto-delete `Allow`, irrelevant to TLS). So it is "compliant" for the
-  public-access question (Finding 5) yet a genuine **TLS finding**: a
-  bucket-level call (e.g. `ListObjects`) still succeeds without TLS. The
-  condition value AWS stores is the string `"false"`, not a boolean — match
-  only the string.
+- **Note (decoy interaction):** `finance-archive-prod` (Finding 5) has a
+  `SecureTransport` Deny covering **both** the bucket ARN and
+  `arn:.../finance-archive-prod-<acct>/*` (its policy also carries the same
+  auto-delete `Allow`, irrelevant to TLS), so it is TLS-compliant — the eval
+  scenario `f6-tls-archive-enforced` is a negative control. Earlier versions
+  scoped that Deny to objects only, which made the decoy a real TLS finding
+  (bucket-level calls like `ListObjects` succeeded without TLS) and broke
+  Finding 5; fixed so the decoy is compliant on every surface. The condition
+  value AWS stores is the string `"false"`, not a boolean — match only the
+  string.
 - **Maps to:** CIS AWS Foundations Benchmark S3 transport-encryption control
   (`aws-foundational-security-best-practices` S3.5).
 
@@ -160,8 +167,9 @@ aws iam list-attached-role-policies --role-name fixture-report-processor-role
 # CloudTrail Lake query — run manually in console first before scripting
 aws s3api get-bucket-policy --bucket finance-archive-prod
 # Finding 6: target returns an auto-delete Allow with NO SecureTransport Deny
-# (finding); archive returns that Allow PLUS a Deny scoped to /* only, not the
-# bucket ARN (finding). Neither bucket is policy-less on the deployed stack.
+# (finding); archive returns that Allow PLUS a Deny covering the bucket ARN
+# and /* (compliant). Neither bucket is policy-less on the deployed stack.
+aws kms get-key-rotation-status --key-id alias/finance-archive-key   # decoy: ENABLED
 aws s3api get-bucket-policy --bucket finance-reports-prod
 ```
 

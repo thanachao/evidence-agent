@@ -101,11 +101,21 @@ class FixtureStack(Stack):
         # that gap is Finding 4. Note the timestamp when you run this deploy.
 
         # --- Finding 5: the decoy. Looks suspicious, is actually correct. ---
+        # Must be compliant on EVERY surface the tools check, or a thorough
+        # agent will correctly find something and the decoy stops being one.
+        # It used to share `key` (rotation off — Finding 2) and scope the TLS
+        # Deny to objects only, so it was really a finding on two counts.
+        archive_key = kms.Key(
+            self, "FinanceArchiveKey",
+            alias="alias/finance-archive-key",
+            enable_key_rotation=True,           # not shared with Finding 2's key
+            removal_policy=RemovalPolicy.DESTROY,
+        )
         archive = s3.Bucket(
             self, "FinanceArchiveProd",
             bucket_name=f"finance-archive-prod-{self.account}",   # account suffix guarantees global uniqueness
             encryption=s3.BucketEncryption.KMS,
-            encryption_key=key,
+            encryption_key=archive_key,
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
             removal_policy=RemovalPolicy.DESTROY,
             auto_delete_objects=True,
@@ -114,6 +124,8 @@ class FixtureStack(Stack):
             effect=iam.Effect.DENY,               # Deny, not Allow — the decoy
             principals=[iam.AnyPrincipal()],
             actions=["s3:*"],
-            resources=[archive.arn_for_objects("*")],
+            # Bucket ARN AND objects: an objects-only Deny leaves bucket-level
+            # calls (e.g. ListObjects) reachable without TLS.
+            resources=[archive.bucket_arn, archive.arn_for_objects("*")],
             conditions={"Bool": {"aws:SecureTransport": "false"}},
         ))
