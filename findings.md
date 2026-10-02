@@ -161,7 +161,8 @@ Confirm each finding is independently retrievable by hand:
 
 ```bash
 aws s3api get-object-acl --bucket finance-reports-prod --key q2-summary.pdf
-aws kms get-key-rotation-status --key-id alias/finance-data-key
+# get-key-rotation-status rejects aliases (InvalidArnException) — resolve the key ID first
+aws kms get-key-rotation-status --key-id $(aws kms describe-key --key-id alias/finance-data-key --query KeyMetadata.KeyId --output text)
 aws iam get-role --role-name fixture-report-processor-role
 aws iam list-attached-role-policies --role-name fixture-report-processor-role
 # CloudTrail Lake query — run manually in console first before scripting
@@ -169,7 +170,7 @@ aws s3api get-bucket-policy --bucket finance-archive-prod
 # Finding 6: target returns an auto-delete Allow with NO SecureTransport Deny
 # (finding); archive returns that Allow PLUS a Deny covering the bucket ARN
 # and /* (compliant). Neither bucket is policy-less on the deployed stack.
-aws kms get-key-rotation-status --key-id alias/finance-archive-key   # decoy: ENABLED
+aws kms get-key-rotation-status --key-id $(aws kms describe-key --key-id alias/finance-archive-key --query KeyMetadata.KeyId --output text)   # decoy: ENABLED
 aws s3api get-bucket-policy --bucket finance-reports-prod
 ```
 
